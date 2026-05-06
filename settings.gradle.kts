@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "once-cell-kotlin"
+
