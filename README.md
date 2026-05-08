@@ -84,7 +84,7 @@ Parts of `once_cell` API are included into `std` [as of Rust 1.70.0](https://git
 
 ```kotlin
 dependencies {
-    implementation("io.github.kotlinmania:once-cell-kotlin:0.1.0-SNAPSHOT")
+    implementation("io.github.kotlinmania:once-cell-kotlin:0.1.0")
 }
 ```
 
