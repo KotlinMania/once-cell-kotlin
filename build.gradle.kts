@@ -50,6 +50,23 @@ val androidSdkManager = projectAndroidSdkDir.resolve(
     },
 )
 val androidSdkInstallMarker = projectAndroidSdkDir.resolve(".install-complete")
+val maxAndroidSdkLicensePrompts = 200
+val requiredAndroidSdkPackageDirs = listOf(
+    projectAndroidSdkDir.resolve("platform-tools"),
+    projectAndroidSdkDir.resolve("platforms/android-$projectCompileSdk"),
+    projectAndroidSdkDir.resolve("build-tools/$projectAndroidBuildTools"),
+)
+
+fun isProjectAndroidSdkInstalled(): Boolean {
+    val installed =
+        androidSdkInstallMarker.exists() &&
+            androidSdkManager.exists() &&
+            requiredAndroidSdkPackageDirs.all { it.exists() }
+    if (!installed && androidSdkInstallMarker.exists()) {
+        androidSdkInstallMarker.delete()
+    }
+    return installed
+}
 
 fun writeAndroidLocalProperties() {
     val sdkDirPropertyValue = projectAndroidSdkDir.absolutePath.replace("\\", "/")
@@ -114,7 +131,7 @@ fun downloadAndroidCommandLineTools() {
 }
 
 fun installProjectAndroidSdk(execOperations: ExecOperations) {
-    if (androidSdkInstallMarker.exists() && androidSdkManager.exists()) {
+    if (isProjectAndroidSdkInstalled()) {
         writeAndroidLocalProperties()
         println("setup-android-sdk: SDK already installed at $projectAndroidSdkDir")
         return
@@ -125,7 +142,7 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
     }
 
     println("setup-android-sdk: accepting licenses")
-    val licenseAnswers = "y\n".repeat(200).toByteArray(Charsets.UTF_8)
+    val licenseAnswers = "y\n".repeat(maxAndroidSdkLicensePrompts).toByteArray(Charsets.UTF_8)
     val licenseResult = execOperations.exec {
         commandLine(sdkManagerCommand("--sdk_root=${projectAndroidSdkDir.absolutePath}", "--licenses"))
         standardInput = ByteArrayInputStream(licenseAnswers)
@@ -350,8 +367,8 @@ rootProject.extensions.configure<YarnRootExtension>("kotlinYarn") {
     resolution("**/minimatch", "10.2.5")
     resolution("picomatch", "4.0.4")
     resolution("**/picomatch", "4.0.4")
-    resolution("qs", "6.15.1")
-    resolution("**/qs", "6.15.1")
+    resolution("qs", "6.15.2")
+    resolution("**/qs", "6.15.2")
     resolution("socket.io-parser", "4.2.6")
     resolution("**/socket.io-parser", "4.2.6")
     resolution("ws", "8.20.1")
@@ -404,6 +421,108 @@ mavenPublishing {
             connection.set("scm:git:git://github.com/KotlinMania/once-cell-kotlin.git")
             developerConnection.set("scm:git:ssh://github.com/KotlinMania/once-cell-kotlin.git")
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CodeQL Java/Kotlin extraction task
+//
+// .github/workflows/codeql.yml invokes `./gradlew codeqlCompileJvm` to feed
+// kotlinc-compiled commonMain through the CodeQL Java agent.
+val codeqlKotlinc: Configuration by configurations.creating {
+    description = "Kotlin compiler (CodeQL extraction target only - not published)"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val codeqlSourceClasspath: Configuration by configurations.creating {
+    description = "Runtime classpath for CodeQL extraction of commonMain sources"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val codeqlAndroidAar: Configuration by configurations.creating {
+    description = "Android AAR artifacts for CodeQL classpath extraction (classes.jar only)"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+dependencies {
+    codeqlKotlinc("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.3.21")
+    codeqlSourceClasspath("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+    codeqlSourceClasspath("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0")
+    codeqlSourceClasspath("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.11.0")
+    codeqlSourceClasspath("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.11.0")
+    codeqlSourceClasspath("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.8.0")
+    codeqlSourceClasspath("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.4.0")
+}
+
+val codeqlCompileJvm = tasks.register<JavaExec>("codeqlCompileJvm") {
+    description =
+        "Compile commonMain Kotlin sources with kotlinc 2.3.21 for CodeQL Java/Kotlin extraction."
+    group = "verification"
+
+    classpath(codeqlKotlinc)
+    mainClass.set("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
+
+    val outDir = layout.buildDirectory.dir("classes/kotlin/codeql-jvm")
+    val aarExtractDir = layout.buildDirectory.dir("codeql/android-aar")
+    val sources = fileTree("src/commonMain/kotlin") { include("**/*.kt") }
+    val sentinelDir = layout.buildDirectory.dir("generated/codeql-empty-source")
+    inputs.files(sources).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(codeqlSourceClasspath).withNormalizer(ClasspathNormalizer::class.java)
+    inputs.files(codeqlAndroidAar).withNormalizer(ClasspathNormalizer::class.java)
+    outputs.dir(outDir)
+    outputs.dir(aarExtractDir)
+    outputs.dir(sentinelDir)
+
+    doFirst {
+        outDir.get().asFile.mkdirs()
+        val extractedJars = mutableListOf<File>()
+        for (aar in codeqlAndroidAar.resolve()) {
+            val extractTarget = aarExtractDir.get().asFile.resolve(aar.nameWithoutExtension)
+            extractTarget.mkdirs()
+            copy {
+                from(zipTree(aar))
+                include("classes.jar")
+                into(extractTarget)
+            }
+            val classesJar = extractTarget.resolve("classes.jar")
+            if (classesJar.exists()) {
+                extractedJars += classesJar
+            }
+        }
+        val fullClasspath =
+            (codeqlSourceClasspath.resolve() + extractedJars)
+                .joinToString(File.pathSeparator) { it.absolutePath }
+        val sourceFiles = sources.files.toMutableList()
+        if (sourceFiles.isEmpty()) {
+            val sentinelFile = sentinelDir.get().asFile.resolve("io/github/kotlinmania/oncecell/codeql/CodeqlEmptySentinel.kt")
+            sentinelFile.parentFile.mkdirs()
+            sentinelFile.writeText(
+                """
+                // Auto-generated. Present so codeqlCompileJvm has at least
+                // one Kotlin source to feed kotlinc; replaced by real
+                // commonMain content once porting begins.
+                package io.github.kotlinmania.oncecell.codeql
+
+                private object CodeqlEmptySentinel
+                """.trimIndent(),
+            )
+            sourceFiles += sentinelFile
+        }
+        args = listOf(
+            "-d", outDir.get().asFile.absolutePath,
+            "-classpath", fullClasspath,
+            "-jvm-target", "21",
+            "-no-stdlib",
+            "-no-reflect",
+            "-language-version", "2.3",
+            "-api-version", "2.3",
+            "-Xexpect-actual-classes",
+            "-opt-in", "kotlin.time.ExperimentalTime",
+            "-opt-in", "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+        ) + sourceFiles.map { it.absolutePath }
     }
 }
 
