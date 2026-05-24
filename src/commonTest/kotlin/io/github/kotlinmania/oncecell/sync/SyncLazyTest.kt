@@ -4,6 +4,7 @@ package io.github.kotlinmania.oncecell.sync
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -50,6 +51,27 @@ class SyncLazyTest {
         val value = Lazy.intoValue(initialized)
         assertIs<LazyValueResult.Value<Int>>(value)
         assertEquals(92, value.value)
+    }
+
+    @Test
+    fun staticLazy() {
+        val xs = Lazy.new {
+            val acc = mutableListOf<Int>()
+            acc += 1
+            acc += 2
+            acc += 3
+            acc.toList()
+        }
+        assertEquals(listOf(1, 2, 3), xs.value)
+        assertEquals(listOf(1, 2, 3), xs.value)
+    }
+
+    @Test
+    fun lazyPoisoning() {
+        val x = Lazy.new<String> { throw RuntimeException("kaboom") }
+        repeat(2) {
+            assertFailsWith<RuntimeException> { Lazy.force(x) }
+        }
     }
 }
 
