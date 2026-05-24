@@ -641,3 +641,60 @@ val patchWasmWasiNodePreopens = tasks.register("patchWasmWasiNodePreopens") {
 tasks.named("wasmWasiNodeTest") {
     dependsOn(patchWasmWasiNodePreopens)
 }
+
+// Run `swift test` against the SPM package produced by `embedSwiftExportForXcode`,
+// so a broken Swift Export surface fails the local build instead of waiting for
+// remote CI. macOS-only: Kotlin/Native's Swift Export pipeline only emits a
+// macosArm64 Debug slice, and `swift test` needs swiftc on PATH.
+val isMacOsHost = System.getProperty("os.name").lowercase().contains("mac")
+
+// Wraps the full Kotlin → Swift Export → swift test loop in a single Exec
+// task. We re-invoke `./gradlew embedSwiftExportForXcode` as a subprocess
+// rather than `dependsOn`-ing it directly, because the
+// `embedSwiftExportForXcode` task reads SDK_NAME / CONFIGURATION /
+// TARGET_BUILD_DIR / ARCHS / FRAMEWORKS_FOLDER_PATH / DEPLOYMENT_TARGET_*
+// from the Gradle daemon's environment at configuration time. Wiring the
+// env vars on the Exec block only exposes them to the spawned `swift` /
+// `gradle` child process — exactly what we need here.
+val swiftTestExport = tasks.register<Exec>("swiftTestExport") {
+    description = "Run swift test against the OnceCell SPM package produced by embedSwiftExportForXcode."
+    group = "verification"
+    onlyIf { isMacOsHost }
+
+    workingDir = layout.projectDirectory.asFile
+
+    val builtProducts = layout.buildDirectory.dir("swift-test").get().asFile.absolutePath
+    val swiftEnv = mapOf(
+        "BUILT_PRODUCTS_DIR" to builtProducts,
+        "TARGET_BUILD_DIR" to builtProducts,
+        "SDK_NAME" to "macosx",
+        "CONFIGURATION" to "Debug",
+        "ARCHS" to "arm64",
+        "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
+        "MACOSX_DEPLOYMENT_TARGET" to "14.0",
+        "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
+    )
+
+    val gradleWrapper = layout.projectDirectory.file("gradlew").asFile.absolutePath
+    val harness = layout.projectDirectory.dir("swift-test-harness").asFile.absolutePath
+    val script = buildString {
+        appendLine("set -euo pipefail")
+        appendLine("'$gradleWrapper' embedSwiftExportForXcode --no-daemon --no-configuration-cache --console=plain")
+        appendLine("cd '$harness'")
+        appendLine("swift test")
+    }
+    commandLine("bash", "-lc", script)
+
+    environment(swiftEnv)
+
+    // A non-zero `swift test` exit code is a real build failure: the Swift
+    // Export bridge cannot be trusted if Swift cannot import or execute it.
+    isIgnoreExitValue = false
+}
+
+// Wire `swift test` into the standard verification graph so `./gradlew check`
+// exercises it on macOS hosts. On non-macOS hosts the task is a no-op via
+// `onlyIf`.
+tasks.matching { it.name == "check" }.configureEach {
+    if (isMacOsHost) dependsOn(swiftTestExport)
+}
