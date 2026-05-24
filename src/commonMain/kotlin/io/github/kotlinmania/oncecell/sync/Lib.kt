@@ -1,8 +1,11 @@
 // port-lint: source lib.rs
+@file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+
 package io.github.kotlinmania.oncecell.sync
 
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
+import kotlin.native.HiddenFromObjC
 
 /**
  * A thread-safe cell that can be written to only once.
@@ -11,6 +14,7 @@ import kotlin.concurrent.atomics.AtomicReference
  * Reading an initialized value establishes the Kotlin atomic happens-before
  * relationship with the write that installed it.
  */
+@HiddenFromObjC
 public class OnceCell<T : Any> private constructor(initial: T?) {
     private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)
     private val value: AtomicReference<T?> = AtomicReference(initial)
@@ -161,6 +165,7 @@ public class OnceCell<T : Any> private constructor(initial: T?) {
     }
 }
 
+@HiddenFromObjC
 public sealed class SetResult<out T : Any> {
     public data object Ok : SetResult<Nothing>()
 
@@ -170,6 +175,7 @@ public sealed class SetResult<out T : Any> {
         get() = this is Ok
 }
 
+@HiddenFromObjC
 public sealed class TryInsertResult<out T : Any> {
     public data class Inserted<T : Any>(public val value: T) : TryInsertResult<T>()
 
@@ -184,6 +190,7 @@ public sealed class TryInsertResult<out T : Any> {
  *
  * This type is thread-safe and can be used for shared lazy values.
  */
+@HiddenFromObjC
 public class Lazy<T : Any> private constructor(init: () -> T) {
     private val cell: OnceCell<T> = OnceCell.new()
     private val init: AtomicReference<(() -> T)?> = AtomicReference(init)
@@ -220,6 +227,7 @@ public class Lazy<T : Any> private constructor(init: () -> T) {
     }
 }
 
+@HiddenFromObjC
 public sealed class LazyValueResult<out T : Any> {
     public data class Value<T : Any>(public val value: T) : LazyValueResult<T>()
 
