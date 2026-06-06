@@ -10,7 +10,6 @@ jobs:
   build:
     name: Build and Test (Windows)
     runs-on: windows-latest
-    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -31,7 +30,6 @@ jobs:
       - name: Build and test Windows target
         run: >
           ./gradlew
-          setupAndroidSdk
           mingwX64Test
           --no-configuration-cache
 
