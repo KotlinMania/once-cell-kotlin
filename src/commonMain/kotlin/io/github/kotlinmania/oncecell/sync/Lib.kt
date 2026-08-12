@@ -15,7 +15,9 @@ import kotlin.native.HiddenFromObjC
  * relationship with the write that installed it.
  */
 @HiddenFromObjC
-public class OnceCell<T : Any> private constructor(initial: T?) {
+public class OnceCell<T : Any> private constructor(
+    initial: T?,
+) {
     private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)
     private val value: AtomicReference<T?> = AtomicReference(initial)
 
@@ -169,7 +171,9 @@ public class OnceCell<T : Any> private constructor(initial: T?) {
 public sealed class SetResult<out T : Any> {
     public data object Ok : SetResult<Nothing>()
 
-    public data class Err<T : Any>(public val value: T) : SetResult<T>()
+    public data class Err<T : Any>(
+        public val value: T,
+    ) : SetResult<T>()
 
     public val isOk: Boolean
         get() = this is Ok
@@ -177,7 +181,9 @@ public sealed class SetResult<out T : Any> {
 
 @HiddenFromObjC
 public sealed class TryInsertResult<out T : Any> {
-    public data class Inserted<T : Any>(public val value: T) : TryInsertResult<T>()
+    public data class Inserted<T : Any>(
+        public val value: T,
+    ) : TryInsertResult<T>()
 
     public data class Existing<T : Any>(
         public val current: T,
@@ -191,7 +197,9 @@ public sealed class TryInsertResult<out T : Any> {
  * This type is thread-safe and can be used for shared lazy values.
  */
 @HiddenFromObjC
-public class Lazy<T : Any> private constructor(init: () -> T) {
+public class Lazy<T : Any> private constructor(
+    init: () -> T,
+) {
     private val cell: OnceCell<T> = OnceCell.new()
     private val init: AtomicReference<(() -> T)?> = AtomicReference(init)
 
@@ -220,8 +228,9 @@ public class Lazy<T : Any> private constructor(init: () -> T) {
             if (current != null) {
                 return LazyValueResult.Value(current)
             }
-            val initializer = thisLazy.init.exchange(null)
-                ?: throw IllegalStateException("Lazy instance has previously been poisoned")
+            val initializer =
+                thisLazy.init.exchange(null)
+                    ?: throw IllegalStateException("Lazy instance has previously been poisoned")
             return LazyValueResult.Initializer(initializer)
         }
     }
@@ -229,7 +238,11 @@ public class Lazy<T : Any> private constructor(init: () -> T) {
 
 @HiddenFromObjC
 public sealed class LazyValueResult<out T : Any> {
-    public data class Value<T : Any>(public val value: T) : LazyValueResult<T>()
+    public data class Value<T : Any>(
+        public val value: T,
+    ) : LazyValueResult<T>()
 
-    public data class Initializer<T : Any>(public val initializer: () -> T) : LazyValueResult<T>()
+    public data class Initializer<T : Any>(
+        public val initializer: () -> T,
+    ) : LazyValueResult<T>()
 }
