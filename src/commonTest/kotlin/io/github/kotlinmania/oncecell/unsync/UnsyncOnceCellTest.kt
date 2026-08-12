@@ -10,7 +10,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UnsyncOnceCellTest {
-
     @Test
     fun onceCell() {
         val c = OnceCell.new<Int>()

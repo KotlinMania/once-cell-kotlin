@@ -24,7 +24,9 @@ import kotlin.native.HiddenFromObjC
  * ```
  */
 @HiddenFromObjC
-public class OnceCell<T : Any> private constructor(initial: T?) {
+public class OnceCell<T : Any> private constructor(
+    initial: T?,
+) {
     private var inner: T? = initial
 
     /** Gets a reference to the underlying value. Returns `null` if the cell is empty. */
@@ -173,7 +175,9 @@ public class OnceCell<T : Any> private constructor(initial: T?) {
 public sealed class SetResult<out T : Any> {
     public data object Ok : SetResult<Nothing>()
 
-    public data class Err<T : Any>(public val value: T) : SetResult<T>()
+    public data class Err<T : Any>(
+        public val value: T,
+    ) : SetResult<T>()
 
     public val isOk: Boolean
         get() = this is Ok
@@ -181,7 +185,9 @@ public sealed class SetResult<out T : Any> {
 
 @HiddenFromObjC
 public sealed class TryInsertResult<out T : Any> {
-    public data class Inserted<T : Any>(public val value: T) : TryInsertResult<T>()
+    public data class Inserted<T : Any>(
+        public val value: T,
+    ) : TryInsertResult<T>()
 
     public data class Existing<T : Any>(
         public val current: T,
@@ -210,7 +216,9 @@ public sealed class TryInsertResult<out T : Any> {
  * ```
  */
 @HiddenFromObjC
-public class Lazy<T : Any> private constructor(init: () -> T) {
+public class Lazy<T : Any> private constructor(
+    init: () -> T,
+) {
     private val cell: OnceCell<T> = OnceCell.new()
     private var init: (() -> T)? = init
 
@@ -264,8 +272,9 @@ public class Lazy<T : Any> private constructor(init: () -> T) {
             if (current != null) {
                 return LazyValueResult.Value(current)
             }
-            val initializer = thisLazy.init
-                ?: throw IllegalStateException("Lazy instance has previously been poisoned")
+            val initializer =
+                thisLazy.init
+                    ?: throw IllegalStateException("Lazy instance has previously been poisoned")
             thisLazy.init = null
             return LazyValueResult.Initializer(initializer)
         }
@@ -274,7 +283,11 @@ public class Lazy<T : Any> private constructor(init: () -> T) {
 
 @HiddenFromObjC
 public sealed class LazyValueResult<out T : Any> {
-    public data class Value<T : Any>(public val value: T) : LazyValueResult<T>()
+    public data class Value<T : Any>(
+        public val value: T,
+    ) : LazyValueResult<T>()
 
-    public data class Initializer<T : Any>(public val initializer: () -> T) : LazyValueResult<T>()
+    public data class Initializer<T : Any>(
+        public val initializer: () -> T,
+    ) : LazyValueResult<T>()
 }

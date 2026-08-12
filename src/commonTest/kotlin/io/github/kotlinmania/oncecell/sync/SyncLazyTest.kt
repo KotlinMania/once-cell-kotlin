@@ -12,10 +12,11 @@ class SyncLazyTest {
     @Test
     fun lazyNew() {
         val called = AtomicInt(0)
-        val lazy = Lazy.new {
-            called.fetchAndAdd(1)
-            92
-        }
+        val lazy =
+            Lazy.new {
+                called.fetchAndAdd(1)
+                92
+            }
 
         assertEquals(0, called.load())
         assertEquals(62, lazy.value - 30)
@@ -55,13 +56,14 @@ class SyncLazyTest {
 
     @Test
     fun staticLazy() {
-        val xs = Lazy.new {
-            val acc = mutableListOf<Int>()
-            acc += 1
-            acc += 2
-            acc += 3
-            acc.toList()
-        }
+        val xs =
+            Lazy.new {
+                val acc = mutableListOf<Int>()
+                acc += 1
+                acc += 2
+                acc += 3
+                acc.toList()
+            }
         assertEquals(listOf(1, 2, 3), xs.value)
         assertEquals(listOf(1, 2, 3), xs.value)
     }
