@@ -162,9 +162,25 @@ public class OnceCell<T : Any> private constructor(
         return if (current == null) "OnceCell(Uninit)" else "OnceCell($current)"
     }
 
+    public fun clone(): OnceCell<T> = copy()
+
+    public fun deref(): T? = get()
+
+    public fun derefMut(): T? = getMut()
+
+    public fun fmt(): String = toString()
+
+    public fun eq(other: Any?): Boolean = equals(other)
+
+    private fun dummy() {}
+
     public companion object {
         /** Creates a new empty cell. */
         public fun <T : Any> new(): OnceCell<T> = OnceCell(null)
+
+        public fun <T : Any> default(): OnceCell<T> = new()
+
+        public fun <T : Any> from(value: T): OnceCell<T> = withValue(value)
 
         /** Creates a new initialized cell. */
         public fun <T : Any> withValue(value: T): OnceCell<T> = OnceCell(value)

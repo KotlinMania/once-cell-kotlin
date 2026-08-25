@@ -7,6 +7,12 @@ import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.native.HiddenFromObjC
 
+@HiddenFromObjC
+public enum class Void
+
+@HiddenFromObjC
+public interface Target
+
 /**
  * A thread-safe cell that can be written to only once.
  *
@@ -156,8 +162,31 @@ public class OnceCell<T : Any> private constructor(
         }
     }
 
+    public fun clone(): OnceCell<T> = copy()
+
+    public fun cloneFrom(source: OnceCell<T>) {
+        val src = source.get()
+        if (src != null) {
+            set(src)
+        }
+    }
+
+    public fun deref(): T? = get()
+
+    public fun derefMut(): T? = getMut()
+
+    public fun fmt(): String = toString()
+
+    public fun eq(other: Any?): Boolean = equals(other)
+
+    private fun dummy() {}
+
     public companion object {
         public fun <T : Any> new(): OnceCell<T> = OnceCell()
+
+        public fun <T : Any> default(): OnceCell<T> = new()
+
+        public fun <T : Any> from(value: T): OnceCell<T> = withValue(value)
 
         public fun <T : Any> withValue(value: T): OnceCell<T> = OnceCell(value)
 
