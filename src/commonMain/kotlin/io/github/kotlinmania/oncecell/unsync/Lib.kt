@@ -172,7 +172,6 @@ public class OnceCell<T : Any> private constructor(
 
     public fun eq(other: Any?): Boolean = equals(other)
 
-
     public companion object {
         /** Creates a new empty cell. */
         public fun <T : Any> new(): OnceCell<T> = OnceCell(null)
