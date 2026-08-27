@@ -1,4 +1,4 @@
-// port-lint: tests race.rs
+// port-lint: tests once_cell/src/race.rs
 package io.github.kotlinmania.oncecell.race
 
 import kotlin.concurrent.atomics.AtomicInt
