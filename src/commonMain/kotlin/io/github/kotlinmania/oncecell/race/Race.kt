@@ -293,7 +293,6 @@ public class OnceRef<T : Any> private constructor(
 
     public fun drop() {}
 
-
     override fun equals(other: Any?): Boolean =
         other is OnceRef<*> && get() == other.get()
 
@@ -392,7 +391,6 @@ public class OnceBox<T : Any> private constructor(
 
     public fun drop() {}
 
-
     override fun equals(other: Any?): Boolean =
         other is OnceBox<*> && get() == other.get()
 
@@ -435,5 +433,8 @@ public sealed class SetResult<out T : Any> {
 
 private sealed class CompareExchangeResult {
     data object Success : CompareExchangeResult()
-    data class Failure(val old: Long) : CompareExchangeResult()
+
+    data class Failure(
+        val old: Long,
+    ) : CompareExchangeResult()
 }

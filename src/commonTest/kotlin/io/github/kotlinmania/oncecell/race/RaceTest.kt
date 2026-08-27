@@ -4,7 +4,6 @@ package io.github.kotlinmania.oncecell.race
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -144,17 +143,19 @@ class RaceTest {
         val globalCnt = AtomicInt(0)
         val cell = OnceBox.new<String>()
 
-        val r1 = cell.getOrInit {
-            globalCnt.fetchAndAdd(1)
-            "hello"
-        }
+        val r1 =
+            cell.getOrInit {
+                globalCnt.fetchAndAdd(1)
+                "hello"
+            }
         assertEquals("hello", r1)
         assertEquals(1, globalCnt.load())
 
-        val r2 = cell.getOrInit {
-            globalCnt.fetchAndAdd(1)
-            "world"
-        }
+        val r2 =
+            cell.getOrInit {
+                globalCnt.fetchAndAdd(1)
+                "world"
+            }
         assertEquals("hello", r2)
         assertEquals(1, globalCnt.load())
         assertEquals("hello", cell.get())
@@ -190,10 +191,11 @@ class RaceTest {
     @Test
     fun onceBoxReentrant() {
         val cell = OnceBox.new<String>()
-        val res = cell.getOrInit {
-            cell.getOrInit { "hello" }
-            "world"
-        }
+        val res =
+            cell.getOrInit {
+                cell.getOrInit { "hello" }
+                "world"
+            }
         assertEquals("hello", res)
     }
 
