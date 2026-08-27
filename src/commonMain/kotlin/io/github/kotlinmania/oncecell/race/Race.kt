@@ -1,4 +1,4 @@
-// port-lint: source once_cell/src/race.rs
+// port-lint: source race.rs
 @file:OptIn(
     kotlin.experimental.ExperimentalObjCRefinement::class,
     kotlin.concurrent.atomics.ExperimentalAtomicApi::class,
@@ -293,7 +293,6 @@ public class OnceRef<T : Any> private constructor(
 
     public fun drop() {}
 
-    private fun dummy() {}
 
     override fun equals(other: Any?): Boolean =
         other is OnceRef<*> && get() == other.get()
@@ -393,7 +392,6 @@ public class OnceBox<T : Any> private constructor(
 
     public fun drop() {}
 
-    private fun dummy() {}
 
     override fun equals(other: Any?): Boolean =
         other is OnceBox<*> && get() == other.get()
