@@ -1,4 +1,4 @@
-// port-lint: source tests/it/unsync_once_cell.rs
+// port-lint: tests once_cell/tests/it/unsync_once_cell.rs
 package io.github.kotlinmania.oncecell.unsync
 
 import kotlin.test.Test

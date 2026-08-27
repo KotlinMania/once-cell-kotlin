@@ -4,13 +4,13 @@ Based on AST analysis, here are the concrete next steps.
 
 ## Summary
 
-- **Files Present:** 5/5 (100.0%)
-- **Function parity:** 77/78 matched (target 185) — 98.7%
-- **Class/type parity:** 16/16 matched (target 34) — 100.0%
-- **Combined symbol parity:** 93/94 matched (target 219) — 98.9%
-- **Average inline-code cosine:** 0.45 (function body across 5 matched files)
-- **Average documentation cosine:** 0.30 (doc text across 5 matched files)
-- **Cheat-zeroed Files:** 0
+- **Files Present:** 5/18 (27.8%)
+- **Function parity:** 77/169 matched (target 185) — 45.6%
+- **Class/type parity:** 16/24 matched (target 34) — 66.7%
+- **Combined symbol parity:** 93/193 matched (target 219) — 48.2%
+- **Average inline-code cosine:** 0.45 (function body across 4 matched files)
+- **Average documentation cosine:** 0.23 (doc text across 4 matched files)
+- **Cheat-zeroed Files:** 1
 - **Critical Issues:** 5 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
@@ -27,7 +27,7 @@ No missing high-value files detected.
 
 Every matched file is listed below with function and type symbol parity.
 
-### 1. imp_std
+### 1. once_cell.imp_std
 
 - **Target:** `imp.ImpStd`
 - **Similarity:** 0.38
@@ -39,18 +39,18 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 5/6 matched
 
-### 2. lib
+### 2. once_cell.lib
 
-- **Target:** `sync.Lib`
-- **Similarity:** 0.44
+- **Target:** `sync.Lib [STUB]`
+- **Similarity:** 0.00
 - **Dependents:** 0
-- **Priority Score:** 2805.6
+- **Priority Score:** 2810.0
 - **Functions:** 24/24 matched (target 64)
 - **Missing functions:** _none_
 - **Types:** 4/4 matched (target 13)
 - **Missing types:** _none_
 
-### 3. race
+### 3. once_cell.race
 
 - **Target:** `race.Race`
 - **Similarity:** 0.52
@@ -61,7 +61,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 5/5 matched (target 12)
 - **Missing types:** _none_
 
-### 4. imp_pl
+### 4. once_cell.imp_pl
 
 - **Target:** `imp.ImpPl`
 - **Similarity:** 0.42
@@ -73,7 +73,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 1/1 matched
 
-### 5. imp_cs
+### 5. once_cell.imp_cs
 
 - **Target:** `imp.ImpCs`
 - **Similarity:** 0.50
