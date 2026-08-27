@@ -1,4 +1,4 @@
-// port-lint: tests once_cell/tests/it/sync_lazy.rs
+// port-lint: tests it/sync_lazy.rs
 package io.github.kotlinmania.oncecell.sync
 
 import kotlin.concurrent.atomics.AtomicInt

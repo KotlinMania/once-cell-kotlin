@@ -1,4 +1,4 @@
-// port-lint: source once_cell/src/lib.rs
+// port-lint: source lib.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.oncecell.sync
@@ -179,7 +179,6 @@ public class OnceCell<T : Any> private constructor(
 
     public fun eq(other: Any?): Boolean = equals(other)
 
-    private fun dummy() {}
 
     public companion object {
         public fun <T : Any> new(): OnceCell<T> = OnceCell()
