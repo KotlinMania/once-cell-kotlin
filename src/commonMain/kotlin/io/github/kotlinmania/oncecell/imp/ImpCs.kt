@@ -1,4 +1,4 @@
-// port-lint: source imp_cs.rs
+// port-lint: source once_cell/src/imp_cs.rs
 @file:OptIn(
     kotlin.experimental.ExperimentalObjCRefinement::class,
     kotlin.concurrent.atomics.ExperimentalAtomicApi::class,
