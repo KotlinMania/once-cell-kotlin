@@ -2,7 +2,7 @@
   "type": "port",
   "name": "once-cell-kotlin",
   "source": {
-    "path": "tmp/once_cell/src",
+    "path": "tmp",
     "lang": "rust"
   },
   "target": {
