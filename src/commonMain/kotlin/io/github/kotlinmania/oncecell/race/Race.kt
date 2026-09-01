@@ -1,4 +1,4 @@
-// port-lint: source once_cell/src/race.rs
+// port-lint: source race.rs
 @file:OptIn(
     kotlin.experimental.ExperimentalObjCRefinement::class,
     kotlin.concurrent.atomics.ExperimentalAtomicApi::class,
