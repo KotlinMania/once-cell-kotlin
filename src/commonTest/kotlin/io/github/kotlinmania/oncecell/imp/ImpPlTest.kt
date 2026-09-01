@@ -1,4 +1,4 @@
-// port-lint: tests once_cell/src/imp_pl.rs
+// port-lint: tests imp_pl.rs
 package io.github.kotlinmania.oncecell.imp
 
 import io.github.kotlinmania.oncecell.imp.pl.OnceCell
