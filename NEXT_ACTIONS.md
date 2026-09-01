@@ -5,12 +5,12 @@ Based on AST analysis, here are the concrete next steps.
 ## Summary
 
 - **Files Present:** 5/18 (27.8%)
-- **Function parity:** 75/169 matched (target 181) — 44.4%
-- **Class/type parity:** 16/24 matched (target 34) — 66.7%
-- **Combined symbol parity:** 91/193 matched (target 215) — 47.2%
+- **Function parity:** 52/145 matched (target 119) — 35.9%
+- **Class/type parity:** 12/20 matched (target 21) — 60.0%
+- **Combined symbol parity:** 64/165 matched (target 140) — 38.8%
 - **Average inline-code cosine:** 0.44 (function body across 4 matched files)
 - **Average documentation cosine:** 0.23 (doc text across 4 matched files)
-- **Cheat-zeroed Files:** 1
+- **Cheat-zeroed Files:** 0
 - **Critical Issues:** 5 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
@@ -27,18 +27,7 @@ No missing high-value files detected.
 
 Every matched file is listed below with function and type symbol parity.
 
-### 1. once_cell.lib
-
-- **Target:** `sync.Lib [STUB]`
-- **Similarity:** 0.00
-- **Dependents:** 0
-- **Priority Score:** 12810.0
-- **Functions:** 23/24 matched (target 62)
-- **Missing functions:** `_dummy`
-- **Types:** 4/4 matched (target 13)
-- **Missing types:** _none_
-
-### 2. once_cell.imp_std
+### 1. once_cell.imp_std
 
 - **Target:** `imp.ImpStd`
 - **Similarity:** 0.38
@@ -50,7 +39,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 5/6 matched
 
-### 3. once_cell.race
+### 2. once_cell.race
 
 - **Target:** `race.Race`
 - **Similarity:** 0.47
@@ -61,7 +50,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 5/5 matched (target 12)
 - **Missing types:** _none_
 
-### 4. once_cell.imp_pl
+### 3. once_cell.imp_pl
 
 - **Target:** `imp.ImpPl`
 - **Similarity:** 0.42
@@ -73,7 +62,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** _none_
 - **Tests:** 1/1 matched
 
-### 5. once_cell.imp_cs
+### 4. once_cell.imp_cs
 
 - **Target:** `imp.ImpCs`
 - **Similarity:** 0.50
@@ -92,4 +81,17 @@ For each file to be considered "complete":
 - All tests ported
 - Documentation ported
 - port-lint header present
+
+## Reexport / Wiring Modules
+
+These files match `reexport_modules` patterns in `.ast_distance_config.json`. They are filtered out of
+normal priority and missing-file ladders because they are wiring
+modules, not direct logic ports. Consult them for call-site routing;
+do not treat them as the next implementation target by default.
+
+### Matched
+
+| Source | Target | Path |
+|--------|--------|------|
+| `once_cell.lib` | `sync.Lib` | `once_cell/src/lib` |
 
