@@ -1,121 +1,230 @@
-# once-cell-kotlin in Kotlin
+<div align="center">
 
-[![GitHub link](https://img.shields.io/badge/GitHub-KotlinMania%2Fonce--cell--kotlin-blue.svg)](https://github.com/KotlinMania/once-cell-kotlin)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.kotlinmania/once-cell-kotlin)](https://central.sonatype.com/artifact/io.github.kotlinmania/once-cell-kotlin)
-[![Build status](https://img.shields.io/github/actions/workflow/status/KotlinMania/once-cell-kotlin/ci.yml?branch=main)](https://github.com/KotlinMania/once-cell-kotlin/actions)
+# `once-cell-kotlin`
 
-This is a Kotlin Multiplatform line-by-line transliteration port of [`matklad/once_cell`](https://github.com/matklad/once_cell).
+**Single-assignment cells and lazy values for Kotlin Multiplatform — without RAII guards.**
 
-**Original Project:** This port is based on [`matklad/once_cell`](https://github.com/matklad/once_cell). All design credit and project intent belong to the upstream authors; this repository is a faithful port to Kotlin Multiplatform with no behavioural changes intended.
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.kotlinmania/once-cell-kotlin?style=for-the-badge&logo=apachemaven&label=Maven%20Central&color=5C4EE5)](https://central.sonatype.com/artifact/io.github.kotlinmania/once-cell-kotlin)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/KotlinMania/once-cell-kotlin/ci.yml?branch=main&style=for-the-badge&logo=githubactions&label=CI)](https://github.com/KotlinMania/once-cell-kotlin/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/KotlinMania/once-cell-kotlin/codeql.yml?branch=main&style=for-the-badge&logo=github&label=CodeQL)](https://github.com/KotlinMania/once-cell-kotlin/actions/workflows/codeql.yml)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0--Beta1-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![KMP Targets](https://img.shields.io/badge/Targets-JVM%20%7C%20Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows%20%7C%20JS%20%7C%20Wasm-F88909?style=for-the-badge)](https://kotlinlang.org/docs/multiplatform.html)
+[![Swift Export](https://img.shields.io/badge/Swift%20Export-Swift%206-F05138?style=for-the-badge&logo=swift&logoColor=white)](https://swift.org)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-00B4AB?style=for-the-badge)](LICENSE)
 
-### Porting status
-
-This is an **in-progress port**. The goal is feature parity with the upstream Rust crate while providing a native Kotlin Multiplatform API. Every Kotlin file carries a `// port-lint: source <path>` header naming its upstream Rust counterpart so the AST-distance tool can track provenance.
+</div>
 
 ---
-
-## Upstream README — `matklad/once_cell`
-
-> The text below is reproduced and lightly edited from [`https://github.com/matklad/once_cell`](https://github.com/matklad/once_cell). It is the upstream project's own description and remains under the upstream authors' authorship; links have been rewritten to absolute upstream URLs so they continue to resolve from this repository.
-
-<p align="center"><img src="design/logo.png" alt="once_cell"></p>
-
-
-[![Build Status](https://github.com/matklad/once_cell/actions/workflows/ci.yaml/badge.svg)](https://github.com/matklad/once_cell/actions)
-[![Crates.io](https://img.shields.io/crates/v/once_cell.svg)](https://crates.io/crates/once_cell)
-[![API reference](https://docs.rs/once_cell/badge.svg)](https://docs.rs/once_cell/)
 
 ## Overview
 
-`once_cell` provides two new cell-like types, `unsync::OnceCell` and `sync::OnceCell`. `OnceCell`
-might store arbitrary non-`Copy` types, can be assigned to at most once and provide direct access
-to the stored contents. In a nutshell, API looks *roughly* like this:
+`once-cell-kotlin` provides single-assignment cells and lazy initialization primitives for **Kotlin Multiplatform** across JVM, Android, Apple (iOS, macOS, tvOS, watchOS with native Swift 6 Export), Linux, Windows, JavaScript, and WebAssembly.
 
-```rust
-impl OnceCell<T> {
-    fn new() -> OnceCell<T> { ... }
-    fn set(&self, value: T) -> Result<(), T> { ... }
-    fn get(&self) -> Option<&T> { ... }
-}
-```
+Unlike a mutex or read-write lock, a `OnceCell` can be written to **at most once**. Because an initialized value is never overwritten through a shared reference, `get()` returns a direct reference (`T?`) without lock guards, wrapper proxies, or contention after initialization.
 
-Note that, like with `RefCell` and `Mutex`, the `set` method requires only a shared reference.
-Because of the single assignment restriction `get` can return an `&T` instead of `Ref<T>`
-or `MutexGuard<T>`.
+### Three Specialized Modules
 
-`once_cell` also has a `Lazy<T>` type, build on top of `OnceCell` which provides the same API as
-the `lazy_static!` macro, but without using any macros:
-
-```rust
-use std::{sync::Mutex, collections::HashMap};
-use once_cell::sync::Lazy;
-
-static GLOBAL_DATA: Lazy<Mutex<HashMap<i32, String>>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert(13, "Spica".to_string());
-    m.insert(74, "Hoyten".to_string());
-    Mutex::new(m)
-});
-
-fn main() {
-    println!("{:?}", GLOBAL_DATA.lock().unwrap());
-}
-```
-
-More patterns and use-cases are in the [docs](https://docs.rs/once_cell/)!
-
-# Related crates
-
-* [double-checked-cell](https://github.com/niklasf/double-checked-cell)
-* [lazy-init](https://crates.io/crates/lazy-init)
-* [lazycell](https://crates.io/crates/lazycell)
-* [mitochondria](https://crates.io/crates/mitochondria)
-* [lazy_static](https://crates.io/crates/lazy_static)
-* [async_once_cell](https://crates.io/crates/async_once_cell)
-* [generic_once_cell](https://crates.io/crates/generic_once_cell) (bring your own mutex)
-
-Parts of `once_cell` API are included into `std` [as of Rust 1.70.0](https://github.com/rust-lang/rust/pull/105587).
+| Package | Primary Types | Concurrency Model | Best For |
+| :--- | :--- | :--- | :--- |
+| **`io.github.kotlinmania.oncecell.sync`** | `OnceCell<T>`, `Lazy<T>`, `StringOnceCell`, `IntOnceCell`, `StringLazy`, `IntLazy` | Thread-safe synchronized initialization; guarantees **at most one** initializer runs while concurrent callers wait. | Shared globals, thread-safe caches, expensive one-time setup, cyclic graph construction. |
+| **`io.github.kotlinmania.oncecell.unsync`** | `OnceCell<T>`, `Lazy<T>`, `StringOnceCell`, `IntOnceCell`, `StringLazy`, `IntLazy` | Single-threaded zero-atomic fast path with deterministic reentrant-initialization detection. | Local lazy structs, single-threaded event loops, coroutines confined to a single dispatcher. |
+| **`io.github.kotlinmania.oncecell.race`** | `OnceNonZeroUsize`, `OnceBool`, `OnceRef<T>`, `OnceBox<T>` | Lock-free, wait-free atomic compare-and-exchange (`CAS`); concurrent initializers may race, and the **first winner** is observed by all threads. | Wait-free atomic flags, idempotent counters, non-blocking pointer/box cells. |
 
 ---
 
-## About this Kotlin port
+## Installation
 
-### Installation
+### Gradle (Kotlin DSL)
 
 ```kotlin
-dependencies {
-    implementation("io.github.kotlinmania:once-cell-kotlin:0.1.1")
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.kotlinmania:once-cell-kotlin:0.1.1")
+        }
+    }
 }
 ```
 
-### Building
+### Gradle Version Catalog (`gradle/libs.versions.toml`)
 
-```bash
-./gradlew build
-./gradlew test
+```toml
+[versions]
+once-cell = "0.1.1"
+
+[libraries]
+once-cell-kotlin = { module = "io.github.kotlinmania:once-cell-kotlin", version.ref = "once-cell" }
 ```
 
-### Targets
+---
 
-- macOS arm64
-- Linux x64
-- Windows mingw-x64
-- iOS arm64 / simulator-arm64 (Swift export + XCFramework)
-- JS (browser + Node.js)
-- Wasm-JS (browser + Node.js)
-- Android (API 24+)
+## Quick Start
 
-### Porting guidelines
+### 1. Thread-Safe `sync.OnceCell`
 
-See [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) for translator discipline, port-lint header convention, and Rust → Kotlin idiom mapping.
+`sync.OnceCell<T>` allows safe shared initialization across threads. If an initializer throws, the exception propagates to the caller and the cell remains uninitialized so a subsequent call can retry.
+
+```kotlin
+import io.github.kotlinmania.oncecell.sync.OnceCell
+import io.github.kotlinmania.oncecell.sync.SetResult
+import io.github.kotlinmania.oncecell.sync.TryInsertResult
+
+val configCell = OnceCell.new<Map<Int, String>>()
+
+// Non-blocking read returns null before initialization
+check(configCell.get() == null)
+
+// Initialize once; guaranteed that only one initializer succeeds
+val map = configCell.getOrInit {
+    mapOf(13 to "Spica", 74 to "Hoyten")
+}
+check(map[13] == "Spica")
+
+// Subsequent writes are rejected without overwriting the existing value
+val secondWrite = configCell.set(emptyMap())
+check(secondWrite is SetResult.Err)
+
+// tryInsert distinguishes freshly inserted vs. already-existing values
+when (val outcome = configCell.tryInsert(emptyMap())) {
+    is TryInsertResult.Inserted -> println("Installed: ${outcome.value}")
+    is TryInsertResult.Existing -> println("Kept existing: ${outcome.current}")
+}
+```
+
+### 2. Thread-Safe `sync.Lazy`
+
+`sync.Lazy<T>` combines a `OnceCell<T>` with an initializer lambda, evaluating on first access via `.value` or `Lazy.force(lazy)`:
+
+```kotlin
+import io.github.kotlinmania.oncecell.sync.Lazy
+
+val globalData: Lazy<Map<Int, String>> = Lazy.new {
+    buildMap {
+        put(13, "Spica")
+        put(74, "Hoyten")
+    }
+}
+
+fun main() {
+    // Evaluated on first access; subsequent reads are lock-free loads
+    println(globalData.value)
+}
+```
+
+### 3. Blocking Wait Across Threads (`sync.OnceCell.wait`)
+
+When one thread is responsible for setting a cell and other threads need the result, `wait()` blocks until initialization completes:
+
+```kotlin
+import io.github.kotlinmania.oncecell.sync.OnceCell
+
+val cell = OnceCell.new<Int>()
+
+// Producer sets the value
+cell.set(92)
+
+// Consumer awaits initialization and receives the non-null value directly
+val answer: Int = cell.wait()
+check(answer == 92)
+```
+
+### 4. Wait-Free Atomic Cells (`race`)
+
+The `race` module provides wait-free cells built on single atomic compare-and-set operations. No thread ever blocks waiting on another thread:
+
+```kotlin
+import io.github.kotlinmania.oncecell.race.OnceBool
+import io.github.kotlinmania.oncecell.race.OnceBox
+import io.github.kotlinmania.oncecell.race.OnceNonZeroUsize
+
+// Wait-free non-zero unsigned integer cell
+val idCell = OnceNonZeroUsize.new()
+val id: ULong = idCell.getOrInit { 42uL }
+check(id == 42uL)
+
+// Wait-free boolean cell
+val flag = OnceBool.new()
+check(flag.getOrInit { true })
+
+// Wait-free heap-allocated reference cell
+val boxCell = OnceBox.new<String>()
+val greeting = boxCell.getOrInit { "Hello from OnceBox" }
+check(greeting == "Hello from OnceBox")
+```
+
+### 5. Single-Threaded Cells (`unsync`)
+
+When thread synchronization is unnecessary, `unsync.OnceCell` and `unsync.Lazy` eliminate atomic operations altogether and immediately detect illegal reentrant initialization:
+
+```kotlin
+import io.github.kotlinmania.oncecell.unsync.Lazy
+import io.github.kotlinmania.oncecell.unsync.OnceCell
+
+val cell = OnceCell.new<String>()
+val value = cell.getOrInit { "initialized" }
+check(value == "initialized")
+
+val sum = Lazy.new { listOf(1, 2, 3).sum() }
+check(sum.value == 6)
+```
+
+### 6. Swift 6 Export (`OnceCellLibrary`)
+
+`once-cell-kotlin` ships first-class **Kotlin Swift Export** support for Apple platforms. In addition to generic Kotlin classes, strongly-typed facades (`StringOnceCell`, `IntOnceCell`, `StringLazy`, `IntLazy`) and SAM `fun interface` initializers bridge cleanly into Swift 6 without `Any?` erasure:
+
+```swift
+import OnceCell
+
+let syncCell = sync.StringOnceCell()
+_ = syncCell.set(newValue: "hello from Swift")
+assert(syncCell.get() == "hello from Swift")
+
+let flag = race.OnceBool.Companion.shared.new()
+_ = flag.set(value: true)
+assert(flag.get() == true)
+```
+
+---
+
+## Multiplatform Target Matrix
+
+Every commit and release of `once-cell-kotlin` is built and verified across the full KotlinMania target surface with `allWarningsAsErrors = true`:
+
+| Platform Family | Targets |
+| :--- | :--- |
+| **JVM & Android** | `jvm`, `android` (`compileSdk 36`, `minSdk 24`) |
+| **Apple (macOS / iOS / tvOS / watchOS)** | `macosArm64`, `iosArm64`, `iosSimulatorArm64`, `tvosArm64`, `tvosSimulatorArm64`, `watchosDeviceArm64`, `watchosSimulatorArm64` + **Swift 6 Export (`OnceCellLibrary`)** |
+| **Linux Native** | `linuxX64`, `linuxArm64` |
+| **Android Native** | `androidNativeX64`, `androidNativeArm64` |
+| **Windows Native** | `mingwX64` |
+| **JavaScript & WebAssembly** | `js` (Browser & Node.js), `wasmJs` (Browser & Node.js), `wasmWasi` (Node.js) |
+
+---
+
+## Building & Testing Locally
+
+```bash
+# Run the multiplatform test suite (including Swift Export SPM tests on macOS)
+./gradlew test
+
+# Run the full multiplatform build, static analysis (Detekt + Ktlint), and target link gate
+./gradlew build
+```
+
+---
+
+## Acknowledgments & License
+
+### Special Thank You
+
+A heartfelt thank you to **[Aleksey Kladov (`@matklad`)](https://github.com/matklad)** and all contributors to the original Rust [**`once_cell`**](https://github.com/matklad/once_cell) crate. Their elegant API design, lock-free state machine architecture, and comprehensive test suite inspired both Rust's standard library (`std::cell::OnceCell` / `std::sync::OnceLock`) and this Kotlin Multiplatform transliteration.
 
 ### License
 
-This Kotlin port is distributed under the same MIT license as the upstream [`matklad/once_cell`](https://github.com/matklad/once_cell). See [LICENSE](LICENSE) (and any sibling `LICENSE-*` / `NOTICE` files mirrored from upstream) for the full text.
+`once-cell-kotlin` is dual-licensed under the same terms as the upstream project, at your option:
 
-Original work copyrighted by the once_cell authors.  
-Kotlin port: Copyright (c) 2026 Sydney Renee and The Solace Project.
+- **MIT License** — see [`LICENSE-MIT`](LICENSE-MIT) or [`LICENSE`](LICENSE)
+- **Apache License, Version 2.0** — see [`LICENSE-APACHE`](LICENSE-APACHE)
 
-### Acknowledgments
-
-Thanks to the [`matklad/once_cell`](https://github.com/matklad/once_cell) maintainers and contributors for the original Rust implementation. This port reproduces their work in Kotlin Multiplatform; bug reports about upstream design or behavior should go to the upstream repository.
+**Original Rust `once_cell` work:** Copyright (c) 2018 Aleksey Kladov and `once_cell` contributors ([`matklad/once_cell`](https://github.com/matklad/once_cell)).  
+**Kotlin Multiplatform port:** Copyright (c) 2026 Sydney Renee and The Solace Project ([`KotlinMania/once-cell-kotlin`](https://github.com/KotlinMania/once-cell-kotlin)).
