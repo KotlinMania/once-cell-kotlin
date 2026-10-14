@@ -16,7 +16,20 @@ internal class Waiter
 internal class Guard(
     internal val state: AtomicInt,
     internal var newState: Int,
-)
+) {
+    public fun drop() {
+        state.store(newState)
+    }
+}
+
+internal fun wait(
+    state: AtomicInt,
+    queue: Int,
+) {
+    if (queue != 0) {
+        state.load()
+    }
+}
 
 internal class OnceCell<T : Any> private constructor(
     initial: T?,

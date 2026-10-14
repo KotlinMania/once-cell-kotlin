@@ -2,11 +2,17 @@
 package io.github.kotlinmania.oncecell.unsync
 
 /**
- * Module metadata for once_cell::unsync.
- *
- * Upstream `once_cell::unsync` is parceled into [OnceCell], [Lazy], and
- * associated result and initializer types.
+ * Single-threaded version of `OnceCell` and `Lazy`.
  */
-public object UnsyncMod {
-    public const val MODULE_NAME: String = "unsync"
-}
+
+// Tracking file for the upstream `unsync` module in `lib.rs`.
+//
+// Upstream symbols parceled into per-symbol files:
+// - `OnceCell` and associated result/initializer types in `unsync/OnceCell.kt`.
+// - `Lazy` and associated result/initializer types in `unsync/Lazy.kt`.
+//
+// Callers migrated:
+// - none
+//
+// Projected callers (Rust). Cross-referenced from `RUST_CALLERS.md`:
+// - `unsync.OnceCell`: `starlark-kotlin` (2 sites).

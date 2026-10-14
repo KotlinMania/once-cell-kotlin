@@ -29,7 +29,7 @@ internal fun interface OnceCellTryInitializer<out T : Any> {
  * Reading an initialized value establishes the Kotlin atomic happens-before
  * relationship with the write that installed it.
  */
-// generic by design: arbitrary type container matching upstream once_cell::sync::OnceCell
+// generic by design: arbitrary type container
 public open class OnceCell<T : Any> protected constructor(
     initial: T?,
 ) {
@@ -119,6 +119,20 @@ public open class OnceCell<T : Any> protected constructor(
         } catch (failure: Throwable) {
             Result.failure(failure)
         }
+
+    /**
+     * Takes the value out of this [OnceCell], moving it back to an
+     * uninitialized state.
+     *
+     * Has no effect and returns `null` if the [OnceCell] has not been
+     * initialized.
+     */
+    public fun take(): T? {
+        if (!isInitialized()) return null
+        val current = value.exchange(null)
+        state.store(INCOMPLETE)
+        return current
+    }
 
     /**
      * Returns the initialized value, or `null` if the cell is empty.
