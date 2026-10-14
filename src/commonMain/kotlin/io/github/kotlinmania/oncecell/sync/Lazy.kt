@@ -15,7 +15,7 @@ public fun interface LazyInitializer<out T : Any> {
  *
  * This type is thread-safe and can be used for shared lazy values.
  */
-// generic by design: arbitrary type container matching upstream once_cell::sync::Lazy
+// generic by design: arbitrary type container
 public class Lazy<T : Any> private constructor(
     init: LazyInitializer<T>,
 ) {
@@ -29,10 +29,18 @@ public class Lazy<T : Any> private constructor(
 
     public fun get(): T? = get(this)
 
+    public fun deref(): T = value
+
+    public fun derefMut(): T = forceMut(this)
+
+    public fun fmt(): String = toString()
+
     override fun toString(): String = "Lazy(cell=$cell, init=..)"
 
     public companion object {
         public fun <T : Any> new(init: LazyInitializer<T>): Lazy<T> = Lazy(init)
+
+        public fun <T : Any> default(init: LazyInitializer<T>): Lazy<T> = new(init)
 
         public fun <T : Any> force(thisLazy: Lazy<T>): T =
             thisLazy.cell.getOrInit {
@@ -40,7 +48,11 @@ public class Lazy<T : Any> private constructor(
                     ?: throw IllegalStateException("Lazy instance has previously been poisoned")
             }
 
+        public fun <T : Any> forceMut(thisLazy: Lazy<T>): T = force(thisLazy)
+
         public fun <T : Any> get(thisLazy: Lazy<T>): T? = thisLazy.cell.get()
+
+        public fun <T : Any> getMut(thisLazy: Lazy<T>): T? = thisLazy.cell.getMut()
 
         public fun <T : Any> intoValue(thisLazy: Lazy<T>): LazyValueResult<T> {
             val current = thisLazy.cell.get()
@@ -54,6 +66,8 @@ public class Lazy<T : Any> private constructor(
         }
     }
 }
+
+internal fun dummy() {}
 
 public sealed class LazyValueResult<out T : Any> {
     public data class Value<T : Any>(

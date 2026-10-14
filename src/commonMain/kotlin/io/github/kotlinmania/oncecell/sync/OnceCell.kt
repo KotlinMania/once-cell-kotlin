@@ -1,8 +1,7 @@
 // port-lint: source lib.rs
 package io.github.kotlinmania.oncecell.sync
 
-import kotlin.concurrent.atomics.AtomicInt
-import kotlin.concurrent.atomics.AtomicReference
+import io.github.kotlinmania.oncecell.imp.std.OnceCell as Imp
 
 public enum class Void
 
@@ -29,12 +28,16 @@ internal fun interface OnceCellTryInitializer<out T : Any> {
  * Reading an initialized value establishes the Kotlin atomic happens-before
  * relationship with the write that installed it.
  */
-// generic by design: arbitrary type container matching upstream once_cell::sync::OnceCell
+// generic by design: arbitrary type container
 public open class OnceCell<T : Any> protected constructor(
     initial: T?,
 ) {
-    private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)
-    private val value: AtomicReference<T?> = AtomicReference(initial)
+    private var inner: Imp<T> =
+        if (initial == null) {
+            Imp.new()
+        } else {
+            Imp.withValue(initial)
+        }
 
     public constructor() : this(null)
 
@@ -45,8 +48,8 @@ public open class OnceCell<T : Any> protected constructor(
      * never blocks.
      */
     public fun get(): T? =
-        if (isInitialized()) {
-            value.load()
+        if (inner.isInitialized()) {
+            getUnchecked()
         } else {
             null
         }
@@ -55,10 +58,11 @@ public open class OnceCell<T : Any> protected constructor(
      * Gets the reference to the underlying value, blocking until it is set.
      */
     public fun wait(): T {
-        while (!isInitialized()) {
-            state.load()
+        if (!inner.isInitialized()) {
+            inner.wait()
         }
-        return value.load()!!
+        check(inner.isInitialized())
+        return getUnchecked()
     }
 
     /**
@@ -66,13 +70,13 @@ public open class OnceCell<T : Any> protected constructor(
      *
      * Mutating the value itself follows Kotlin reference semantics.
      */
-    public fun getMut(): T? = get()
+    public fun getMut(): T? = inner.getMut()
 
     /**
      * Gets the reference to the underlying value without checking whether the
      * cell is initialized.
      */
-    public fun getUnchecked(): T = value.load()!!
+    public fun getUnchecked(): T = inner.getUnchecked()
 
     /**
      * Sets the contents of this cell to [newValue].
@@ -81,21 +85,27 @@ public open class OnceCell<T : Any> protected constructor(
      * [newValue] if it was already full.
      */
     public fun set(newValue: T): SetResult<T> =
-        when (tryInsert(newValue)) {
+        when (val result = tryInsert(newValue)) {
             is TryInsertResult.Inserted -> SetResult.Ok
-            is TryInsertResult.Existing -> SetResult.Err(newValue)
+            is TryInsertResult.Existing -> SetResult.Err(result.value)
         }
 
     /**
      * Like [set], but also returns the final cell value.
      */
     public fun tryInsert(newValue: T): TryInsertResult<T> {
-        get()?.let { old -> return TryInsertResult.Existing(old, newValue) }
-        val installed = initialize { Result.success(newValue) }
-        return if (installed === newValue) {
-            TryInsertResult.Inserted(installed)
+        var candidate: T? = newValue
+        val res =
+            getOrInit {
+                val taken = candidate!!
+                candidate = null
+                taken
+            }
+        val leftover = candidate
+        return if (leftover == null) {
+            TryInsertResult.Inserted(res)
         } else {
-            TryInsertResult.Existing(installed, newValue)
+            TryInsertResult.Existing(res, leftover)
         }
     }
 
@@ -113,19 +123,32 @@ public open class OnceCell<T : Any> protected constructor(
      * was empty. If the initializer fails, the error is returned and the cell
      * remains uninitialized.
      */
-    internal fun getOrTryInit(init: OnceCellTryInitializer<T>): Result<T> =
-        try {
-            Result.success(initialize(init))
-        } catch (failure: Throwable) {
-            Result.failure(failure)
-        }
+    internal fun getOrTryInit(init: OnceCellTryInitializer<T>): Result<T> {
+        get()?.let { return Result.success(it) }
+        inner.initialize { init() }.onFailure { return Result.failure(it) }
+        check(inner.isInitialized())
+        return Result.success(getUnchecked())
+    }
+
+    /**
+     * Takes the value out of this [OnceCell], moving it back to an
+     * uninitialized state.
+     *
+     * Has no effect and returns `null` if the [OnceCell] has not been
+     * initialized.
+     */
+    public fun take(): T? {
+        val previous = inner
+        inner = Imp.new()
+        return previous.intoInner()
+    }
 
     /**
      * Returns the initialized value, or `null` if the cell is empty.
      */
-    public fun intoInner(): T? = get()
+    public fun intoInner(): T? = inner.intoInner()
 
-    public fun isInitialized(): Boolean = state.load() == COMPLETE
+    public fun isInitialized(): Boolean = inner.isInitialized()
 
     public fun copy(): OnceCell<T> {
         val current = get()
@@ -150,34 +173,16 @@ public open class OnceCell<T : Any> protected constructor(
         }
     }
 
-    private fun initialize(init: OnceCellTryInitializer<T>): T {
-        get()?.let { return it }
-        while (true) {
-            if (state.compareAndSet(INCOMPLETE, RUNNING)) {
-                try {
-                    val newValue = init().getOrThrow()
-                    value.store(newValue)
-                    state.store(COMPLETE)
-                    return newValue
-                } catch (failure: Throwable) {
-                    state.store(INCOMPLETE)
-                    throw failure
-                }
-            }
-            when (state.load()) {
-                COMPLETE -> return value.load()!!
-                RUNNING -> continue
-            }
-        }
-    }
-
     public fun clone(): OnceCell<T> = copy()
 
     public fun cloneFrom(source: OnceCell<T>) {
         val src = source.get()
-        if (src != null) {
-            set(src)
-        }
+        inner =
+            if (src == null) {
+                Imp.new()
+            } else {
+                Imp.withValue(src)
+            }
     }
 
     public fun deref(): T? = get()
@@ -196,10 +201,6 @@ public open class OnceCell<T : Any> protected constructor(
         public fun <T : Any> from(value: T): OnceCell<T> = withValue(value)
 
         public fun <T : Any> withValue(value: T): OnceCell<T> = OnceCell(value)
-
-        private const val INCOMPLETE: Int = 0
-        private const val RUNNING: Int = 1
-        private const val COMPLETE: Int = 2
     }
 }
 

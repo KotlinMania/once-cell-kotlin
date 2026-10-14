@@ -28,7 +28,7 @@ public fun interface LazyInitializer<out T : Any> {
  * //   92
  * ```
  */
-// generic by design: arbitrary type container matching upstream once_cell::unsync::Lazy
+// generic by design: arbitrary type container
 public class Lazy<T : Any> private constructor(
     init: LazyInitializer<T>,
 ) {
@@ -44,11 +44,20 @@ public class Lazy<T : Any> private constructor(
     /** Returns the result of this lazy value if it was initialized, otherwise `null`. */
     public fun get(): T? = get(this)
 
+    public fun deref(): T = value
+
+    public fun derefMut(): T = forceMut(this)
+
+    public fun fmt(): String = toString()
+
     override fun toString(): String = "Lazy(cell=$cell, init=..)"
 
     public companion object {
         /** Creates a new lazy value with the given initializing function. */
         public fun <T : Any> new(init: LazyInitializer<T>): Lazy<T> = Lazy(init)
+
+        /** Creates a new lazy value using the given default initializing function. */
+        public fun <T : Any> default(init: LazyInitializer<T>): Lazy<T> = new(init)
 
         /**
          * Forces the evaluation of this lazy value and returns a reference to

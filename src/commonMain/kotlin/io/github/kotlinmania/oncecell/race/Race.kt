@@ -63,7 +63,7 @@ public class OnceNonZeroUsize private constructor(
      */
     public fun set(value: ULong): SetResult<ULong> {
         require(value > 0uL) { "OnceNonZeroUsize value must be non-zero" }
-        return when (val outcome = compareExchange(value)) {
+        return when (compareExchange(value)) {
             is CompareExchangeResult.Success -> SetResult.Ok
             is CompareExchangeResult.Failure -> SetResult.Err(value)
         }
@@ -319,6 +319,8 @@ public class OnceRef<T : Any> private constructor(
         public fun <T : Any> new(): OnceRef<T> = OnceRef()
 
         public fun <T : Any> default(): OnceRef<T> = new()
+
+        internal fun dummy() {}
     }
 }
 
@@ -423,6 +425,8 @@ public class OnceBox<T : Any> private constructor(
         public fun <T : Any> withValue(value: T): OnceBox<T> = OnceBox(value)
     }
 }
+
+internal fun dummy() {}
 
 public sealed class SetResult<out T : Any> {
     public abstract val isOk: Boolean

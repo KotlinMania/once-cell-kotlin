@@ -11,10 +11,17 @@ import kotlin.test.assertTrue
 
 class ImpStdTest {
     @Test
+    fun init() {
+        val cell = OnceCell.new<Int>()
+        cell.init { 42 }
+        assertEquals(42, cell.get())
+    }
+
+    @Test
     fun smokeOnce() {
         val cell = OnceCell.new<Int>()
         assertNull(cell.get())
-        assertTrue(cell.initialize { Result.success(92) }.isSuccess)
+        cell.init { 92 }
         assertEquals(92, cell.get())
     }
 

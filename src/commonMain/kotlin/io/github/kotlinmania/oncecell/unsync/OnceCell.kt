@@ -33,7 +33,7 @@ internal fun interface OnceCellTryInitializer<out T : Any> {
  * check(cell.get() != null)
  * ```
  */
-// generic by design: arbitrary type container matching upstream once_cell::unsync::OnceCell
+// generic by design: arbitrary type container
 public open class OnceCell<T : Any> protected constructor(
     initial: T?,
 ) {
@@ -175,6 +175,10 @@ public open class OnceCell<T : Any> protected constructor(
     }
 
     public fun clone(): OnceCell<T> = copy()
+
+    public fun cloneFrom(source: OnceCell<T>) {
+        inner = source.get()
+    }
 
     public fun deref(): T? = get()
 
