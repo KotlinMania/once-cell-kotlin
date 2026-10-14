@@ -1,17 +1,26 @@
 // port-lint: source lib.rs
-@file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
-
 package io.github.kotlinmania.oncecell.sync
 
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.native.HiddenFromObjC
 
-@HiddenFromObjC
 public enum class Void
 
-@HiddenFromObjC
 public interface Target
+
+/**
+ * Initializer callback for thread-safe [OnceCell.getOrInit].
+ */
+public fun interface OnceCellInitializer<out T : Any> {
+    public operator fun invoke(): T
+}
+
+/**
+ * Initializer callback returning a [Result] for thread-safe [OnceCell.getOrTryInit].
+ */
+internal fun interface OnceCellTryInitializer<out T : Any> {
+    public operator fun invoke(): Result<T>
+}
 
 /**
  * A thread-safe cell that can be written to only once.
@@ -20,8 +29,8 @@ public interface Target
  * Reading an initialized value establishes the Kotlin atomic happens-before
  * relationship with the write that installed it.
  */
-@HiddenFromObjC
-public class OnceCell<T : Any> private constructor(
+// generic by design: arbitrary type container matching upstream once_cell::sync::OnceCell
+public open class OnceCell<T : Any> protected constructor(
     initial: T?,
 ) {
     private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)
@@ -97,14 +106,14 @@ public class OnceCell<T : Any> private constructor(
      * If [init] throws, the exception is propagated and the cell remains
      * uninitialized.
      */
-    public fun getOrInit(init: () -> T): T = getOrTryInit { Result.success(init()) }.getOrThrow()
+    public fun getOrInit(init: OnceCellInitializer<T>): T = getOrTryInit { Result.success(init()) }.getOrThrow()
 
     /**
      * Gets the contents of the cell, initializing it with [init] if the cell
      * was empty. If the initializer fails, the error is returned and the cell
      * remains uninitialized.
      */
-    public fun getOrTryInit(init: () -> Result<T>): Result<T> =
+    internal fun getOrTryInit(init: OnceCellTryInitializer<T>): Result<T> =
         try {
             Result.success(initialize(init))
         } catch (failure: Throwable) {
@@ -141,7 +150,7 @@ public class OnceCell<T : Any> private constructor(
         }
     }
 
-    private fun initialize(init: () -> Result<T>): T {
+    private fun initialize(init: OnceCellTryInitializer<T>): T {
         get()?.let { return it }
         while (true) {
             if (state.compareAndSet(INCOMPLETE, RUNNING)) {
@@ -194,82 +203,57 @@ public class OnceCell<T : Any> private constructor(
     }
 }
 
-@HiddenFromObjC
-public sealed class SetResult<out T : Any> {
-    public data object Ok : SetResult<Nothing>()
-
-    public data class Err<T : Any>(
-        public val value: T,
-    ) : SetResult<T>()
-
-    public val isOk: Boolean
-        get() = this is Ok
-}
-
-@HiddenFromObjC
-public sealed class TryInsertResult<out T : Any> {
-    public data class Inserted<T : Any>(
-        public val value: T,
-    ) : TryInsertResult<T>()
-
-    public data class Existing<T : Any>(
-        public val current: T,
-        public val value: T,
-    ) : TryInsertResult<T>()
+/**
+ * Strongly-typed thread-safe [OnceCell] holding a [String] value, optimized for Swift Export.
+ */
+public class StringOnceCell(
+    initial: String? = null,
+) : OnceCell<String>(initial) {
+    public constructor() : this(null)
 }
 
 /**
- * A value that is initialized on the first access.
- *
- * This type is thread-safe and can be used for shared lazy values.
+ * Strongly-typed thread-safe [OnceCell] holding an [Int] value, optimized for Swift Export.
  */
-@HiddenFromObjC
-public class Lazy<T : Any> private constructor(
-    init: () -> T,
-) {
-    private val cell: OnceCell<T> = OnceCell.new()
-    private val init: AtomicReference<(() -> T)?> = AtomicReference(init)
+public class IntOnceCell(
+    initial: Int? = null,
+) : OnceCell<Int>(initial) {
+    public constructor() : this(null)
+}
 
-    public val value: T
-        get() = force(this)
+public sealed class SetResult<out T : Any> {
+    public abstract val isOk: Boolean
+    public val isErr: Boolean get() = !isOk
+    public open val error: T? get() = null
 
-    public operator fun invoke(): T = force(this)
+    public data object Ok : SetResult<Nothing>() {
+        override val isOk: Boolean get() = true
+    }
 
-    public fun get(): T? = get(this)
-
-    override fun toString(): String = "Lazy(cell=$cell, init=..)"
-
-    public companion object {
-        public fun <T : Any> new(init: () -> T): Lazy<T> = Lazy(init)
-
-        public fun <T : Any> force(thisLazy: Lazy<T>): T =
-            thisLazy.cell.getOrInit {
-                thisLazy.init.exchange(null)?.invoke()
-                    ?: throw IllegalStateException("Lazy instance has previously been poisoned")
-            }
-
-        public fun <T : Any> get(thisLazy: Lazy<T>): T? = thisLazy.cell.get()
-
-        public fun <T : Any> intoValue(thisLazy: Lazy<T>): LazyValueResult<T> {
-            val current = thisLazy.cell.get()
-            if (current != null) {
-                return LazyValueResult.Value(current)
-            }
-            val initializer =
-                thisLazy.init.exchange(null)
-                    ?: throw IllegalStateException("Lazy instance has previously been poisoned")
-            return LazyValueResult.Initializer(initializer)
-        }
+    public data class Err<T : Any>(
+        public val value: T,
+    ) : SetResult<T>() {
+        override val isOk: Boolean get() = false
+        override val error: T get() = value
     }
 }
 
-@HiddenFromObjC
-public sealed class LazyValueResult<out T : Any> {
-    public data class Value<T : Any>(
-        public val value: T,
-    ) : LazyValueResult<T>()
+public sealed class TryInsertResult<out T : Any> {
+    public abstract val isInserted: Boolean
+    public val isExisting: Boolean get() = !isInserted
+    public open val value: T? get() = null
+    public open val current: T? get() = null
 
-    public data class Initializer<T : Any>(
-        public val initializer: () -> T,
-    ) : LazyValueResult<T>()
+    public data class Inserted<T : Any>(
+        override val value: T,
+    ) : TryInsertResult<T>() {
+        override val isInserted: Boolean get() = true
+    }
+
+    public data class Existing<T : Any>(
+        override val current: T,
+        override val value: T,
+    ) : TryInsertResult<T>() {
+        override val isInserted: Boolean get() = false
+    }
 }

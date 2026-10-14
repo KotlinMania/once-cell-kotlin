@@ -8,18 +8,15 @@ package io.github.kotlinmania.oncecell.imp.pl
 
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.native.HiddenFromObjC
 
-@HiddenFromObjC
-public class Guard(
-    public val state: AtomicInt,
-    public var newState: Int,
+internal class Guard(
+    internal val state: AtomicInt,
+    internal var newState: Int,
 ) {
     public fun drop() {}
 }
 
-@HiddenFromObjC
-public class OnceCell<T : Any> private constructor(
+internal class OnceCell<T : Any> private constructor(
     initial: T?,
 ) {
     private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)
