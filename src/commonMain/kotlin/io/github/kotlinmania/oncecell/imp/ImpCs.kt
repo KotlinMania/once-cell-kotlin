@@ -8,10 +8,8 @@ package io.github.kotlinmania.oncecell.imp.cs
 
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.native.HiddenFromObjC
 
-@HiddenFromObjC
-public class OnceCell<T : Any> private constructor(
+internal class OnceCell<T : Any> private constructor(
     initial: T?,
 ) {
     private val state: AtomicInt = AtomicInt(if (initial == null) INCOMPLETE else COMPLETE)

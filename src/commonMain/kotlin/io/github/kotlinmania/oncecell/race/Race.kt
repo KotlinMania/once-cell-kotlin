@@ -9,12 +9,24 @@ package io.github.kotlinmania.oncecell.race
 
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.native.HiddenFromObjC
+
+/**
+ * Initializer callback for race cells.
+ */
+public fun interface RaceInitializer<out T> {
+    public operator fun invoke(): T
+}
+
+/**
+ * Initializer callback returning a [Result] for race cells.
+ */
+internal fun interface RaceTryInitializer<out T> {
+    public operator fun invoke(): Result<T>
+}
 
 /**
  * An empty type representing an uninhabited type.
  */
-@HiddenFromObjC
 public enum class Void
 
 /**
@@ -22,7 +34,6 @@ public enum class Void
  *
  * Stores non-zero unsigned integer values where 0 represents an uninitialized cell.
  */
-@HiddenFromObjC
 public class OnceNonZeroUsize private constructor(
     initial: ULong?,
 ) {
@@ -66,7 +77,7 @@ public class OnceNonZeroUsize private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: () -> ULong): ULong =
+    public fun getOrInit(f: RaceInitializer<ULong>): ULong =
         getOrTryInit { Result.success(f()) }.getOrThrow()
 
     /**
@@ -78,7 +89,7 @@ public class OnceNonZeroUsize private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrTryInit(f: () -> Result<ULong>): Result<ULong> {
+    internal fun getOrTryInit(f: RaceTryInitializer<ULong>): Result<ULong> {
         val existing = get()
         if (existing != null) {
             return Result.success(existing)
@@ -86,7 +97,7 @@ public class OnceNonZeroUsize private constructor(
         return init(f)
     }
 
-    private fun init(f: () -> Result<ULong>): Result<ULong> {
+    private fun init(f: RaceTryInitializer<ULong>): Result<ULong> {
         val produced = f()
         if (produced.isFailure) return produced
         val nz = produced.getOrThrow()
@@ -145,7 +156,6 @@ public class OnceNonZeroUsize private constructor(
 /**
  * A thread-safe cell which can be written to only once.
  */
-@HiddenFromObjC
 public class OnceBool private constructor(
     private val inner: OnceNonZeroUsize,
 ) {
@@ -176,7 +186,7 @@ public class OnceBool private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: () -> Boolean): Boolean =
+    public fun getOrInit(f: RaceInitializer<Boolean>): Boolean =
         fromUsize(inner.getOrInit { toUsize(f()) })
 
     /**
@@ -188,7 +198,7 @@ public class OnceBool private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrTryInit(f: () -> Result<Boolean>): Result<Boolean> =
+    internal fun getOrTryInit(f: RaceTryInitializer<Boolean>): Result<Boolean> =
         inner.getOrTryInit { f().map { toUsize(it) } }.map { fromUsize(it) }
 
     public fun fmt(): String = toString()
@@ -222,7 +232,6 @@ public class OnceBool private constructor(
 /**
  * A thread-safe cell which can be written to only once.
  */
-@HiddenFromObjC
 public class OnceRef<T : Any> private constructor(
     initial: T?,
 ) {
@@ -256,7 +265,7 @@ public class OnceRef<T : Any> private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: () -> T): T =
+    public fun getOrInit(f: RaceInitializer<T>): T =
         getOrTryInit { Result.success(f()) }.getOrThrow()
 
     /**
@@ -268,7 +277,7 @@ public class OnceRef<T : Any> private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrTryInit(f: () -> Result<T>): Result<T> {
+    internal fun getOrTryInit(f: RaceTryInitializer<T>): Result<T> {
         val existing = get()
         if (existing != null) {
             return Result.success(existing)
@@ -276,7 +285,7 @@ public class OnceRef<T : Any> private constructor(
         return init(f)
     }
 
-    private fun init(f: () -> Result<T>): Result<T> {
+    private fun init(f: RaceTryInitializer<T>): Result<T> {
         val produced = f()
         if (produced.isFailure) return produced
         val value = produced.getOrThrow()
@@ -316,7 +325,6 @@ public class OnceRef<T : Any> private constructor(
 /**
  * A thread-safe cell which can be written to only once.
  */
-@HiddenFromObjC
 public class OnceBox<T : Any> private constructor(
     initial: T?,
 ) {
@@ -350,7 +358,7 @@ public class OnceBox<T : Any> private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: () -> T): T =
+    public fun getOrInit(f: RaceInitializer<T>): T =
         getOrTryInit { Result.success(f()) }.getOrThrow()
 
     /**
@@ -362,7 +370,7 @@ public class OnceBox<T : Any> private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrTryInit(f: () -> Result<T>): Result<T> {
+    internal fun getOrTryInit(f: RaceTryInitializer<T>): Result<T> {
         val existing = get()
         if (existing != null) {
             return Result.success(existing)
@@ -370,7 +378,7 @@ public class OnceBox<T : Any> private constructor(
         return init(f)
     }
 
-    private fun init(f: () -> Result<T>): Result<T> {
+    private fun init(f: RaceTryInitializer<T>): Result<T> {
         val produced = f()
         if (produced.isFailure) return produced
         val value = produced.getOrThrow()
@@ -416,19 +424,21 @@ public class OnceBox<T : Any> private constructor(
     }
 }
 
-@HiddenFromObjC
 public sealed class SetResult<out T : Any> {
-    public data object Ok : SetResult<Nothing>()
+    public abstract val isOk: Boolean
+    public val isErr: Boolean get() = !isOk
+    public open val error: T? get() = null
+
+    public data object Ok : SetResult<Nothing>() {
+        override val isOk: Boolean get() = true
+    }
 
     public data class Err<T : Any>(
         public val value: T,
-    ) : SetResult<T>()
-
-    public val isOk: Boolean
-        get() = this is Ok
-
-    public val isErr: Boolean
-        get() = this is Err
+    ) : SetResult<T>() {
+        override val isOk: Boolean get() = false
+        override val error: T get() = value
+    }
 }
 
 private sealed class CompareExchangeResult {
