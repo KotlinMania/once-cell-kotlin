@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftTestHarness",
     platforms: [
-        .macOS(.v14),
+        .macOS("15.0"),
     ],
     dependencies: [
         .package(name: "OnceCell", path: "../build/SPMPackage/macosArm64/Debug")

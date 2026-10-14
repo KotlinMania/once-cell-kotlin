@@ -63,7 +63,7 @@ public class OnceNonZeroUsize private constructor(
      */
     public fun set(value: ULong): SetResult<ULong> {
         require(value > 0uL) { "OnceNonZeroUsize value must be non-zero" }
-        return when (val outcome = compareExchange(value)) {
+        return when (compareExchange(value)) {
             is CompareExchangeResult.Success -> SetResult.Ok
             is CompareExchangeResult.Failure -> SetResult.Err(value)
         }

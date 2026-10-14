@@ -71,11 +71,11 @@ class SyncOnceCellTest {
         val cell = OnceCell.new<String>()
         assertNull(cell.get())
 
-        val failedPanic =
+        assertFailsWith<IllegalStateException> {
             cell.getOrTryInit {
                 error("boom")
             }
-        assertTrue(failedPanic.isFailure)
+        }
         assertNull(cell.get())
 
         val failedErr =

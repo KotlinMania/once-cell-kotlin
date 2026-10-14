@@ -13,7 +13,47 @@ internal class Guard(
     internal val state: AtomicInt,
     internal var newState: Int,
 ) {
-    public fun drop() {}
+    public fun drop() {
+        state.store(newState)
+    }
+}
+
+internal fun initializeInner(
+    state: AtomicInt,
+    init: () -> Boolean,
+) {
+    while (true) {
+        if (state.compareAndSet(OnceCell.INCOMPLETE, OnceCell.RUNNING)) {
+            val guard = Guard(state, OnceCell.INCOMPLETE)
+            try {
+                if (init()) {
+                    guard.newState = OnceCell.COMPLETE
+                }
+            } finally {
+                guard.drop()
+            }
+            return
+        }
+        when (state.load()) {
+            OnceCell.COMPLETE -> {
+                return
+            }
+
+            OnceCell.RUNNING -> {
+                while (state.load() == OnceCell.RUNNING) {
+                    // Wait while running
+                }
+            }
+
+            OnceCell.INCOMPLETE -> {
+                continue
+            }
+
+            else -> {
+                check(false)
+            }
+        }
+    }
 }
 
 internal class OnceCell<T : Any> private constructor(
@@ -26,37 +66,46 @@ internal class OnceCell<T : Any> private constructor(
 
     public fun isInitialized(): Boolean = state.load() == COMPLETE
 
-    public fun initialize(init: () -> Result<T>): Result<Unit> {
-        if (isInitialized()) return Result.success(Unit)
-        while (true) {
-            if (state.compareAndSet(INCOMPLETE, RUNNING)) {
-                return try {
-                    val newValue = init().getOrThrow()
+    public fun initialize(f: () -> Result<T>): Result<Unit> {
+        var fOpt: (() -> Result<T>)? = f
+        var res: Result<Unit> = Result.success(Unit)
+        initializeInner(state) {
+            val initFn = fOpt!!
+            fOpt = null
+            initFn().fold(
+                onSuccess = { newValue ->
+                    check(value.load() == null)
                     value.store(newValue)
-                    state.store(COMPLETE)
-                    Result.success(Unit)
-                } catch (failure: Throwable) {
-                    state.store(INCOMPLETE)
-                    Result.failure(failure)
-                }
-            }
-            when (state.load()) {
-                COMPLETE -> return Result.success(Unit)
-                RUNNING -> continue
-            }
+                    true
+                },
+                onFailure = { err ->
+                    res = Result.failure(err)
+                    false
+                },
+            )
+        }
+        return res
+    }
+
+    public fun initializeInner(init: () -> Boolean) {
+        initializeInner(state, init)
+    }
+
+    @kotlin.jvm.JvmName("awaitCompletion")
+    public fun wait() {
+        while (state.load() != COMPLETE) {
+            // Wait until complete
         }
     }
 
-    public fun initializeInner(init: () -> Boolean) {}
+    public fun getUnchecked(): T {
+        check(isInitialized())
+        return value.load()!!
+    }
 
-    @kotlin.jvm.JvmName("awaitCompletion")
-    public fun wait() {}
+    public fun getMut(): T? = if (isInitialized()) value.load() else null
 
-    public fun getUnchecked(): T = value.load()!!
-
-    public fun getMut(): T? = value.load()
-
-    public fun intoInner(): T? = value.load()
+    public fun intoInner(): T? = if (isInitialized()) value.exchange(null) else null
 
     public fun drop() {}
 
@@ -67,8 +116,8 @@ internal class OnceCell<T : Any> private constructor(
 
         public fun <T : Any> withValue(value: T): OnceCell<T> = OnceCell(value)
 
-        private const val INCOMPLETE: Int = 0
-        private const val RUNNING: Int = 1
-        private const val COMPLETE: Int = 2
+        internal const val INCOMPLETE: Int = 0
+        internal const val RUNNING: Int = 1
+        internal const val COMPLETE: Int = 2
     }
 }
