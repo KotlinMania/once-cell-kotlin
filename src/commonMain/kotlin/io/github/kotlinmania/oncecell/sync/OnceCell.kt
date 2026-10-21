@@ -1,4 +1,3 @@
-// port-lint: source lib.rs
 package io.github.kotlinmania.oncecell.sync
 
 import io.github.kotlinmania.oncecell.imp.std.OnceCell as Imp
