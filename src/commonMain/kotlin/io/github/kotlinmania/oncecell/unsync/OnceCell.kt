@@ -201,12 +201,123 @@ public open class OnceCell<T : Any> protected constructor(
 }
 
 /**
+ * Concrete result of [StringOnceCell.set].
+ */
+public class StringSetResult internal constructor(
+    public val isOk: Boolean,
+    public val error: String?,
+) {
+    public val isErr: Boolean get() = !isOk
+}
+
+/**
+ * Concrete result of [StringOnceCell.tryInsert].
+ */
+public class StringTryInsertResult internal constructor(
+    public val isInserted: Boolean,
+    public val value: String,
+    public val current: String?,
+) {
+    public val isExisting: Boolean get() = !isInserted
+}
+
+/**
+ * Concrete result of [IntOnceCell.set].
+ */
+public class IntSetResult internal constructor(
+    public val isOk: Boolean,
+    public val error: Int?,
+) {
+    public val isErr: Boolean get() = !isOk
+}
+
+/**
+ * Concrete result of [IntOnceCell.tryInsert].
+ */
+public class IntTryInsertResult internal constructor(
+    public val isInserted: Boolean,
+    public val value: Int,
+    public val current: Int?,
+) {
+    public val isExisting: Boolean get() = !isInserted
+}
+
+/**
  * Strongly-typed [OnceCell] holding a [String] value, optimized for Swift Export.
  */
 public class StringOnceCell(
     initial: String? = null,
-) : OnceCell<String>(initial) {
+) {
+    private val delegate: OnceCell<String> =
+        if (initial == null) {
+            OnceCell.new()
+        } else {
+            OnceCell.withValue(initial)
+        }
+
     public constructor() : this(null)
+
+    public fun get(): String? = delegate.get()
+
+    public fun getMut(): String? = delegate.getMut()
+
+    public fun set(value: String): StringSetResult =
+        when (val result = delegate.set(value)) {
+            is SetResult.Ok -> StringSetResult(isOk = true, error = null)
+            is SetResult.Err -> StringSetResult(isOk = false, error = result.value)
+        }
+
+    public fun tryInsert(value: String): StringTryInsertResult =
+        when (val result = delegate.tryInsert(value)) {
+            is TryInsertResult.Inserted -> {
+                StringTryInsertResult(isInserted = true, value = result.value, current = null)
+            }
+
+            is TryInsertResult.Existing -> {
+                StringTryInsertResult(isInserted = false, value = result.value, current = result.current)
+            }
+        }
+
+    public fun getOrInit(f: () -> String): String = delegate.getOrInit { f() }
+
+    public fun take(): String? = delegate.take()
+
+    public fun intoInner(): String? = delegate.intoInner()
+
+    public fun isInitialized(): Boolean = delegate.get() != null
+
+    public fun copy(): StringOnceCell = StringOnceCell(get())
+
+    public fun clone(): StringOnceCell = copy()
+
+    public fun cloneFrom(source: StringOnceCell) {
+        delegate.cloneFrom(source.delegate)
+    }
+
+    public fun deref(): String? = delegate.deref()
+
+    public fun derefMut(): String? = delegate.derefMut()
+
+    public fun fmt(): String = delegate.fmt()
+
+    public fun eq(other: Any?): Boolean = equals(other)
+
+    override fun equals(other: Any?): Boolean =
+        other is StringOnceCell && get() == other.get()
+
+    override fun hashCode(): Int = delegate.hashCode()
+
+    override fun toString(): String = delegate.toString()
+
+    public companion object {
+        public fun new(): StringOnceCell = StringOnceCell()
+
+        public fun default(): StringOnceCell = new()
+
+        public fun from(value: String): StringOnceCell = withValue(value)
+
+        public fun withValue(value: String): StringOnceCell = StringOnceCell(value)
+    }
 }
 
 /**
@@ -214,8 +325,77 @@ public class StringOnceCell(
  */
 public class IntOnceCell(
     initial: Int? = null,
-) : OnceCell<Int>(initial) {
+) {
+    private val delegate: OnceCell<Int> =
+        if (initial == null) {
+            OnceCell.new()
+        } else {
+            OnceCell.withValue(initial)
+        }
+
     public constructor() : this(null)
+
+    public fun get(): Int? = delegate.get()
+
+    public fun getMut(): Int? = delegate.getMut()
+
+    public fun set(value: Int): IntSetResult =
+        when (val result = delegate.set(value)) {
+            is SetResult.Ok -> IntSetResult(isOk = true, error = null)
+            is SetResult.Err -> IntSetResult(isOk = false, error = result.value)
+        }
+
+    public fun tryInsert(value: Int): IntTryInsertResult =
+        when (val result = delegate.tryInsert(value)) {
+            is TryInsertResult.Inserted -> {
+                IntTryInsertResult(isInserted = true, value = result.value, current = null)
+            }
+
+            is TryInsertResult.Existing -> {
+                IntTryInsertResult(isInserted = false, value = result.value, current = result.current)
+            }
+        }
+
+    public fun getOrInit(f: () -> Int): Int = delegate.getOrInit { f() }
+
+    public fun take(): Int? = delegate.take()
+
+    public fun intoInner(): Int? = delegate.intoInner()
+
+    public fun isInitialized(): Boolean = delegate.get() != null
+
+    public fun copy(): IntOnceCell = IntOnceCell(get())
+
+    public fun clone(): IntOnceCell = copy()
+
+    public fun cloneFrom(source: IntOnceCell) {
+        delegate.cloneFrom(source.delegate)
+    }
+
+    public fun deref(): Int? = delegate.deref()
+
+    public fun derefMut(): Int? = delegate.derefMut()
+
+    public fun fmt(): String = delegate.fmt()
+
+    public fun eq(other: Any?): Boolean = equals(other)
+
+    override fun equals(other: Any?): Boolean =
+        other is IntOnceCell && get() == other.get()
+
+    override fun hashCode(): Int = delegate.hashCode()
+
+    override fun toString(): String = delegate.toString()
+
+    public companion object {
+        public fun new(): IntOnceCell = IntOnceCell()
+
+        public fun default(): IntOnceCell = new()
+
+        public fun from(value: Int): IntOnceCell = withValue(value)
+
+        public fun withValue(value: Int): IntOnceCell = IntOnceCell(value)
+    }
 }
 
 public sealed class SetResult<out T : Any> {

@@ -46,3 +46,12 @@ jobs:
           -Pproject.publication.android.rootStagingDirectory=build/root-publication/staging-deploy
           -Pproject.publication.android.expectedRootHead=${{ github.sha }}
           --no-configuration-cache
+
+      - name: Verify independent Android publication consumer
+        run: |
+          cp -R build/root-publication/staging-deploy/. build/staging-deploy/
+          ./gradlew -p verification/android-consumer verifyAndroidConsumer \
+            -PproducerRepository=${{ github.workspace }}/build/staging-deploy \
+            -PproducerVersion=0.1.1 \
+            -PconsumerCompileSdk=34 \
+            --no-configuration-cache

@@ -59,6 +59,10 @@ jobs:
     uses: ./.github/workflows/windows.yml
     permissions:
       contents: read
+  jvm:
+    uses: ./.github/workflows/jvm.yml
+    permissions:
+      contents: read
   js:
     uses: ./.github/workflows/js.yml
     permissions:

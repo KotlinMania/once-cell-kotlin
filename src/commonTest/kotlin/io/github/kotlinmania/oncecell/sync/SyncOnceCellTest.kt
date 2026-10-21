@@ -215,8 +215,18 @@ class SyncOnceCellTest {
     fun stringAndIntOnceCellTypedFacades() {
         val strCell = StringOnceCell()
         assertNull(strCell.get())
-        assertTrue(strCell.set("alpha").isOk)
+        val firstSet = strCell.set("alpha")
+        assertTrue(firstSet.isOk)
+        assertNull(firstSet.error)
+        val duplicateSet = strCell.set("beta")
+        assertTrue(duplicateSet.isErr)
+        assertEquals("beta", duplicateSet.error)
+        val existingInsert = strCell.tryInsert("gamma")
+        assertTrue(existingInsert.isExisting)
+        assertEquals("alpha", existingInsert.current)
+        assertEquals("gamma", existingInsert.value)
         assertEquals("alpha", strCell.get())
+        assertEquals("alpha", strCell.wait())
         assertEquals("alpha", strCell.take())
         assertNull(strCell.get())
 
@@ -224,6 +234,10 @@ class SyncOnceCellTest {
         assertNull(intCell.get())
         assertEquals(42, intCell.getOrInit { 42 })
         assertEquals(42, intCell.get())
+        val dupInt = intCell.tryInsert(99)
+        assertTrue(dupInt.isExisting)
+        assertEquals(42, dupInt.current)
+        assertEquals(99, dupInt.value)
 
         assertFailsWith<IllegalStateException> {
             val failing = IntOnceCell()
