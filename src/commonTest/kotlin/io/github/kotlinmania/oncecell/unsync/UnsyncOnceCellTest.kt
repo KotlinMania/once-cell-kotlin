@@ -121,4 +121,26 @@ class UnsyncOnceCellTest {
             }
         }
     }
+
+    @Test
+    fun unsyncStringAndIntOnceCellTypedFacades() {
+        val strCell = StringOnceCell()
+        assertNull(strCell.get())
+        val firstSet = strCell.set("alpha")
+        assertTrue(firstSet.isOk)
+        assertNull(firstSet.error)
+        val duplicateSet = strCell.set("beta")
+        assertTrue(duplicateSet.isErr)
+        assertEquals("beta", duplicateSet.error)
+        val existingInsert = strCell.tryInsert("gamma")
+        assertTrue(existingInsert.isExisting)
+        assertEquals("alpha", existingInsert.current)
+        assertEquals("gamma", existingInsert.value)
+        assertEquals("alpha", strCell.take())
+        assertNull(strCell.get())
+
+        val intCell = IntOnceCell()
+        assertEquals(92, intCell.getOrInit { 92 })
+        assertEquals(92, intCell.intoInner())
+    }
 }

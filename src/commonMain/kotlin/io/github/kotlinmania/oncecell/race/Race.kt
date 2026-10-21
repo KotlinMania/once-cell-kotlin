@@ -77,7 +77,7 @@ public class OnceNonZeroUsize private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: RaceInitializer<ULong>): ULong =
+    public fun getOrInit(f: () -> ULong): ULong =
         getOrTryInit { Result.success(f()) }.getOrThrow()
 
     /**
@@ -186,7 +186,7 @@ public class OnceBool private constructor(
      * be called. However, all threads will return the same value, produced by
      * some `f`.
      */
-    public fun getOrInit(f: RaceInitializer<Boolean>): Boolean =
+    public fun getOrInit(f: () -> Boolean): Boolean =
         fromUsize(inner.getOrInit { toUsize(f()) })
 
     /**
